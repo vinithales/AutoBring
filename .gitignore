@@ -21,4 +21,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/crawler-app/puppeteer_data
+
 
