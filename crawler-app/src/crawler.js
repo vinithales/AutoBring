@@ -1,5 +1,14 @@
 import puppeteer from 'puppeteer';
 
+process.on('unhandledRejection', (error) => {
+    console.error(JSON.stringify({
+        status: 'error',
+        message: 'Erro não tratado no crawler',
+        error: error.message
+    }));
+    process.exit(1);
+});
+
 const targetUrl = process.argv[2];
 
 if (!targetUrl) {
@@ -10,8 +19,40 @@ if (!targetUrl) {
     process.exit(1);
 }
 
+async function findProductLink(page){
+    try {
+        //espera o <a> do carrinho carregar
+        await page.waitForSelector('a.woocommerce-LoopProduct-link', {timeout:5000});
+            
+
+        return await page.evaluate(() => {
+            const links = Array.from(document.querySelectorAll('a.woocommerce-LoopProduct-link'));
+            if (links.length === 0) return null;
+        
+            const randomIndex = Math.floor(Math.random() * links.length);
+            return links[randomIndex].href;
+        });
+
+    } catch (error) {
+        console.error(JSON.stringify({
+            status: 'error',
+            message: 'Não foi possível encontrar o link de produto:', 
+            erro: error.message,
+            report: report
+        }));
+    }
+}
+
+
+
+
+
 (async () => {
-    const browser = await puppeteer.launch({ headless: true });
+    const browser = await puppeteer.launch({ 
+        headless: "new",
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+        userDataDir: './tmp/puppeteer'
+     });
     const page = await browser.newPage();
     const report = {
         url: targetUrl,
@@ -23,7 +64,6 @@ if (!targetUrl) {
     };
 
     try {
-        // Etapa 1: Acessar a página inicial
         await trackStep(page, report, 'homepage', targetUrl);
 
         // Etapa 2: Navegar para um produto
@@ -44,10 +84,15 @@ if (!targetUrl) {
         report.success = true;
     } catch (error) {
         report.errors.push({
-            step: report.steps.length > 0 ? report.steps[report.steps.length - 1].name : 'unknown',
             error: error.message,
-            timestamp: new Date().toISOString()
+            stack: error.stack
         });
+        console.error(JSON.stringify({
+            status: 'error',
+            message: 'Erro durante a execução do crawler',
+            report: report
+        }));
+        process.exit(1);
     } finally {
         report.endTime = new Date().toISOString();
         report.totalTime = report.steps.reduce((total, step) => total + step.duration, 0);

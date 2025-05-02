@@ -1,5 +1,9 @@
 <?php
 
 use App\Http\Controllers\CrawlerController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 
-Route::post('/run-crawler', [CrawlerController::class, 'runCrawler']);
+Route::post('/runCrawler', [CrawlerController::class, 'runCrawler']);
+
+

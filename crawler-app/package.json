@@ -1,9 +1,11 @@
 {
   "name": "crawler-app",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/crawler.js"
   },
   "author": "",
   "license": "ISC",
@@ -11,5 +13,8 @@
   "dependencies": {
     "nodemailer": "^6.10.1",
     "puppeteer": "^24.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

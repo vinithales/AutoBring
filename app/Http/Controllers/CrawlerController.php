@@ -2,9 +2,13 @@
 
 namespace App\Http\Controllers;
 
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+
 
 class CrawlerController extends Controller
 {
@@ -29,10 +33,10 @@ class CrawlerController extends Controller
         try {
 
             $process = new Process($command);
-            $process->setTimeout(3);
+            $process->setTimeout(30);
             $process->run();
 
-            if($process->isSucessful()){
+            if(!$process->isSuccessful()){
                 throw new ProcessFailedException($process);
             }
 
