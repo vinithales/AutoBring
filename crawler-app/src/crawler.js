@@ -19,31 +19,6 @@ if (!targetUrl) {
     process.exit(1);
 }
 
-async function findProductLink(page){
-    try {
-        //espera o <a> do carrinho carregar
-        await page.waitForSelector('a.woocommerce-LoopProduct-link', {timeout:5000});
-            
-
-        return await page.evaluate(() => {
-            const links = Array.from(document.querySelectorAll('a.woocommerce-LoopProduct-link'));
-            if (links.length === 0) return null;
-        
-            const randomIndex = Math.floor(Math.random() * links.length);
-            return links[randomIndex].href;
-        });
-
-    } catch (error) {
-        console.error(JSON.stringify({
-            status: 'error',
-            message: 'Não foi possível encontrar o link de produto:', 
-            erro: error.message,
-            report: report
-        }));
-    }
-}
-
-
 
 
 
@@ -101,6 +76,47 @@ async function findProductLink(page){
         console.log(JSON.stringify(report));
     }
 })();
+
+
+async function findProductLink(page){
+    try {
+        //espera o <a> do carrinho carregar
+        await page.waitForSelector('a.woocommerce-LoopProduct-link', {timeout:5000});
+            
+
+        return await page.evaluate(() => {
+            const links = Array.from(document.querySelectorAll('a.woocommerce-LoopProduct-link'));
+            if (links.length === 0) return null;
+        
+            const randomIndex = Math.floor(Math.random() * links.length);
+            return links[randomIndex].href;
+        });
+
+    } catch (error) {
+        console.error(JSON.stringify({
+            status: 'error',
+            message: 'Não foi possível encontrar o link de produto:', 
+            erro: error.message,
+            report: report
+        }));
+    }
+}
+
+
+async function addToCart(page, report){
+    try {
+        await page.waitForSelector()
+    } catch (error) {
+        report.steps.push({
+            name: 'add_to_cart',
+            status: 'Não foi possível adicionar ao carrinho',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+        throw error;
+    }
+}
+
 
 async function trackStep(page, report, stepName, url) {
     const start = performance.now();
