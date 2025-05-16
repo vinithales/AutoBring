@@ -105,7 +105,16 @@ async function findProductLink(page){
 
 async function addToCart(page, report){
     try {
-        await page.waitForSelector()
+        await page.waitForSelector('button.single_add_to_cart_button.button.alt', {timeout: 5000});
+        await page.click('button.single_add_to_cart_button.button.alt');
+        await page.waitForSelector('a.elementor-button.elementor-button--checkout.elementor-size-md', {timeout: 15000});
+        await page.click('a.elementor-button.elementor-button--checkout.elementor-size-md');
+
+        report.steps.push({
+            name: 'add_to_cart',
+            status: 'completed',
+            timestamp: new Date().toISOString()
+        });
     } catch (error) {
         report.steps.push({
             name: 'add_to_cart',
