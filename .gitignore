@@ -22,5 +22,6 @@ yarn-error.log
 /.vscode
 /.zed
 /crawler-app/puppeteer_data
+/crawler-app/tmp/puppeteer
 
 

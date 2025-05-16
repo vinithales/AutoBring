@@ -1,9 +1,14 @@
 import puppeteer from 'puppeteer';
+import { config } from './config.js';
+import { trackStep } from './utils.js';
+import { findProductLink } from './scraper.js';
+import { addToCart, goToCheckout } from './steps/cart.js';
+import { fillCheckoutForm } from './checkout.js';
 
 process.on('unhandledRejection', (error) => {
     console.error(JSON.stringify({
         status: 'error',
-        message: 'Erro não tratado no crawler',
+        message: 'Unhandled error in crawler',
         error: error.message
     }));
     process.exit(1);
@@ -14,21 +19,25 @@ const targetUrl = process.argv[2];
 if (!targetUrl) {
     console.error(JSON.stringify({
         status: 'error',
-        message: 'URL não fornecida'
+        message: 'URL not provided'
     }));
     process.exit(1);
 }
-
-
-
 
 (async () => {
     const browser = await puppeteer.launch({ 
         headless: "new",
         executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-        userDataDir: './tmp/puppeteer'
-     });
+        userDataDir: './tmp/puppeteer',
+        protocolTimeout: config.protocolTimeout,
+        args: config.browserArgs
+    });
+    
     const page = await browser.newPage();
+    await page.setDefaultNavigationTimeout(config.timeout);
+    await page.setDefaultTimeout(config.timeout);
+    await page.setViewport(config.viewport);
+
     const report = {
         url: targetUrl,
         startTime: new Date().toISOString(),
@@ -41,20 +50,15 @@ if (!targetUrl) {
     try {
         await trackStep(page, report, 'homepage', targetUrl);
 
-        // Etapa 2: Navegar para um produto
         const productLink = await findProductLink(page);
-        if (productLink) {
-            await trackStep(page, report, 'product_page', productLink);
-            
-            // Etapa 3: Adicionar ao carrinho
-            await addToCart(page, report);
-            
-            // Etapa 4: Ir para o checkout
-            await goToCheckout(page, report);
-            
-            // Etapa 5: Preencher formulário de checkout
-            await fillCheckoutForm(page, report);
+        if (!productLink) {
+            throw new Error('No product links found');
         }
+
+        await trackStep(page, report, 'product_page', productLink);
+        await addToCart(page, report);
+        await goToCheckout(page, report);
+        await fillCheckoutForm(page, report);
 
         report.success = true;
     } catch (error) {
@@ -64,7 +68,7 @@ if (!targetUrl) {
         });
         console.error(JSON.stringify({
             status: 'error',
-            message: 'Erro durante a execução do crawler',
+            message: 'Error during crawler execution',
             report: report
         }));
         process.exit(1);
@@ -76,85 +80,3 @@ if (!targetUrl) {
         console.log(JSON.stringify(report));
     }
 })();
-
-
-async function findProductLink(page){
-    try {
-        //espera o <a> do carrinho carregar
-        await page.waitForSelector('a.woocommerce-LoopProduct-link', {timeout:5000});
-            
-
-        return await page.evaluate(() => {
-            const links = Array.from(document.querySelectorAll('a.woocommerce-LoopProduct-link'));
-            if (links.length === 0) return null;
-        
-            const randomIndex = Math.floor(Math.random() * links.length);
-            return links[randomIndex].href;
-        });
-
-    } catch (error) {
-        console.error(JSON.stringify({
-            status: 'error',
-            message: 'Não foi possível encontrar o link de produto:', 
-            erro: error.message,
-            report: report
-        }));
-    }
-}
-
-
-async function addToCart(page, report){
-    try {
-        await page.waitForSelector('button.single_add_to_cart_button.button.alt', {timeout: 5000});
-        await page.click('button.single_add_to_cart_button.button.alt');
-        await page.waitForSelector('a.elementor-button.elementor-button--checkout.elementor-size-md', {timeout: 15000});
-        await page.click('a.elementor-button.elementor-button--checkout.elementor-size-md');
-
-        report.steps.push({
-            name: 'add_to_cart',
-            status: 'completed',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        report.steps.push({
-            name: 'add_to_cart',
-            status: 'Não foi possível adicionar ao carrinho',
-            error: error.message,
-            timestamp: new Date().toISOString()
-        });
-        throw error;
-    }
-}
-
-
-async function trackStep(page, report, stepName, url) {
-    const start = performance.now();
-    
-    try {
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-        const duration = performance.now() - start;
-        
-        report.steps.push({
-            name: stepName,
-            url: url,
-            duration: duration,
-            timestamp: new Date().toISOString(),
-            status: 'completed'
-        });
-        
-        return true;
-    } catch (error) {
-        const duration = performance.now() - start;
-        
-        report.steps.push({
-            name: stepName,
-            url: url,
-            duration: duration,
-            timestamp: new Date().toISOString(),
-            status: 'failed'
-        });
-        
-        throw error;
-    }
-}
-
